@@ -1,0 +1,7 @@
+---
+applications:
+  - name: simple-http
+    memory: 128M
+    instances: 1
+    buildpack: go_buildpack
+    command: simple-http
