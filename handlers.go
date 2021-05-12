@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -23,14 +24,28 @@ func dataInResponseHandler(w http.ResponseWriter, r *http.Request) {
 	if length == "" {
 		length = "100"
 	}
+	sleep := r.FormValue("sleep")
+	if sleep == "" {
+		sleep = "0"
+	}
 
 	l, err := strconv.Atoi(length)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	s, err := strconv.Atoi(sleep)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	w.Write([]byte(fmt.Sprintf("{\"data\": \"%s\"}", RandStringRunes(l))))
+	w.Write([]byte(fmt.Sprintf("{\"data\": \"")))
+	for i := 1; i < l; i++ {
+		w.Write([]byte(fmt.Sprintf("%s", RandStringRunes(1))))
+		time.Sleep(time.Duration(int64(s)) * time.Second)
+	}
+	w.Write([]byte(fmt.Sprintf("\"}")))
 }
 
 func readBodyHandler(w http.ResponseWriter, r *http.Request) {
@@ -40,5 +55,4 @@ func readBodyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-
 }
