@@ -1,0 +1,112 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: support-deployer
+spec:
+  # default parameters. see ClusterSourceTemplate for more info. (optional)
+  #
+  params: []
+
+  # how to template out the kubernetes object. (required)
+  #
+  template:
+    apiVersion: kappctrl.k14s.io/v1alpha1
+    kind: App
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      serviceAccountName: service-account
+      fetch:
+        - inline:
+            paths:
+              manifest.yml: |
+                ---
+                apiVersion: kapp.k14s.io/v1alpha1
+                kind: Config
+                rebaseRules:
+                  - path: [metadata, annotations, serving.knative.dev/creator]
+                    type: copy
+                    sources: [new, existing]
+                    resourceMatchers: &matchers
+                      - apiVersionKindMatcher: {apiVersion: serving.knative.dev/v1, kind: Service}
+                  - path: [metadata, annotations, serving.knative.dev/lastModifier]
+                    type: copy
+                    sources: [new, existing]
+                    resourceMatchers: *matchers
+                ---
+                apiVersion: serving.knative.dev/v1
+                kind: Service
+                metadata:
+                  name: $(workload.metadata.name)$
+                spec:
+                  template:
+                    metadata:
+                      annotations:
+                        autoscaling.knative.dev/minScale: "1"
+                    spec:
+                      containers:
+                        - image: $(workload.metadata.annotations.image)$
+                          securityContext:
+                            runAsUser: 1000
+                      imagePullSecrets:
+                        - name: docker-hub-creds
+      template:
+        - ytt: {}
+      deploy:
+        - kapp: {}
+
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: support-supply-chain
+spec:
+  selector:
+    app.tanzu.vmware.com/workload-type: web
+  components:
+    - name: support-app-deploy
+      templateRef:
+        kind: ClusterTemplate
+        name: support-deployer
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-account
+secrets:
+  - name: private-registry-credentials
+  - name: docker-hub-creds
+imagePullSecrets:
+  - name: private-registry-credentials
+  - name: docker-hub-creds
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: support-supply-chain-deployer
+rules:
+- apiGroups: ["serving.knative.dev"]
+  resources: ["services"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: service-account-deployer
+roleRef:
+  name: support-supply-chain-deployer
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: service-account
+    namespace: default
