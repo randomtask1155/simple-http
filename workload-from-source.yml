@@ -1,0 +1,17 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  annotations:
+    image: randomtask1155/simple-http
+  name: simple-http
+  labels:
+    apps.tanzu.vmware.com/workload-type: web
+    test: me
+spec:
+  source:
+#    imgpkgBundle:
+#      image: randomtask1155/simple-http
+    git:
+      url: https://github.com/randomtask1155/simple-http
+      ref:
+        branch: main

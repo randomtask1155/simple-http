@@ -7,7 +7,6 @@ metadata:
   labels:
     app.tanzu.vmware.com/workload-type: web
     test: me
-  run-image: randomtask1155/simple-http
 spec:
   source:
     imgpkgBundle:
