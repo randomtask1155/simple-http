@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -46,6 +47,24 @@ func dataInResponseHandler(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(time.Duration(int64(s)) * time.Second)
 	}
 	w.Write([]byte(fmt.Sprintf("\"}")))
+}
+
+func dnsRequestHandler(w http.ResponseWriter, r *http.Request) {
+	host := r.FormValue("hostname")
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		errString := fmt.Sprintf("Could not get IPs for host %s: %s\n", host, err)
+		fmt.Printf("%s\n", errString)
+		w.Write([]byte(fmt.Sprintf("<html>%s</html>\n", errString)))
+		return
+	}
+
+	foundIps := ""
+	for _, ip := range ips {
+		foundIps += fmt.Sprintf("%s. IN A %s\n", host, ip.String())
+	}
+	w.Write([]byte(fmt.Sprintf("<html>%s</html>\n", foundIps)))
 }
 
 func readBodyHandler(w http.ResponseWriter, r *http.Request) {

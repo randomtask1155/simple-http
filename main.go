@@ -21,6 +21,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/get/data", dataInResponseHandler)
+	http.HandleFunc("/get/dns", dnsRequestHandler)
 	http.HandleFunc("/post/data", readBodyHandler)
 	http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 }
