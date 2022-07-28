@@ -22,5 +22,6 @@ func main() {
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/get/data", dataInResponseHandler)
 	http.HandleFunc("/post/data", readBodyHandler)
+	http.HandleFunc("/get/nested", nestedHandler)
 	http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 }
