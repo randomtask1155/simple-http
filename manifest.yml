@@ -5,3 +5,4 @@ applications:
     instances: 1
     buildpack: go_buildpack
     command: simple-http
+    #readiness-health-check-type: port

@@ -11,6 +11,11 @@ import (
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var sleepTime int64
+
+func init() {
+	sleepTime = 0
+}
 
 func RandStringRunes(n int) string {
 	b := make([]rune, n)
@@ -18,6 +23,52 @@ func RandStringRunes(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
+}
+
+func DieHorriblyHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("ouch")
+	os.Exit(123)
+}
+
+/*
+	https://domain/health?sleep=2
+	adding sleep param will set sleep for all future requests
+*/
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	sleep := r.FormValue("sleep")
+	if sleep != "" {
+		s, err := strconv.Atoi(sleep)
+		if err != nil {
+			fmt.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		sleepTime = int64(s)
+	}
+	time.Sleep(time.Duration(sleepTime) * time.Second)
+}
+
+// this is not synchronized so don't send too many requests or it will get weird
+func shutdownHTTPServer(w http.ResponseWriter, r *http.Request) {
+	var s int
+	var err error
+	sleep := r.FormValue("sleep")
+	if sleep != "" {
+		s, err = strconv.Atoi(sleep)
+		if err != nil {
+			fmt.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	} else {
+		s = 1 // default sleep for 1 second
+	}
+	fmt.Println("shutdown the http server")
+	serverChan <- "stop"
+	fmt.Printf("sleeping for %d seconds\n", s)
+	time.Sleep(time.Duration(int64(s)) * time.Second)
+	fmt.Println("starting the http server")
+	serverChan <- "start"
 }
 
 func dataInResponseHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,60 +96,15 @@ func dataInResponseHandler(w http.ResponseWriter, r *http.Request) {
 	for i := 1; i < l; i++ {
 		w.Write([]byte(fmt.Sprintf("%s", RandStringRunes(1))))
 		time.Sleep(time.Duration(int64(s)) * time.Second)
-		if i >= (l / 2) {
-			panic("die half way through")
-		}
 	}
 	w.Write([]byte(fmt.Sprintf("\"}")))
 }
 
 func readBodyHandler(w http.ResponseWriter, r *http.Request) {
-	//time.Sleep(1 * time.Second)
-	//panic("die stupid request body")
-	fmt.Printf("%v\n", r)
-	fmt.Printf("%v\n", r.Body)
 	_, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("%v\n", r)
-	fmt.Printf("%v\n", r.Body)
-	r.Body.Close()
-	fmt.Printf("%v\n", r)
-	fmt.Printf("%v\n", r.Body)
-	//defer r.Body.Close()
-}
-
-func nestedHandler(w http.ResponseWriter, r *http.Request) {
-	length := r.FormValue("length")
-	if length == "" {
-		length = "100"
-	}
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://127.0.0.1:%s/get/data?lenght=%s", os.Getenv("PORT"), length), nil)
-	if err != nil {
-		fmt.Printf("failed to create request %s\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: true,
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("RESPONSE_BODY=%v: %s\n", resp.Body, err)
-		w.WriteHeader(http.StatusBadGateway) // should i still close body?
-		return
-	}
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadGateway)
-		return
-	}
-	defer resp.Body.Close()
+	defer r.Body.Close()
 }
