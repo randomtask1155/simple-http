@@ -3,24 +3,25 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 var server *http.Server
 var serverChan chan (string)
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
+	/*body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading body: %v", err)
 		http.Error(w, "can't read body", http.StatusBadRequest)
 		return
 	}
-	log.Printf("%s\n", body)
+	log.Printf("%s\n", body)*/
 	w.Write([]byte("<html>Hello!</html>"))
 }
 
@@ -44,16 +45,23 @@ func listenAndServeHTTP(serverError chan (error)) {
 }
 
 func main() {
-	server = &http.Server{Addr: ":" + os.Getenv("PORT"), Handler: nil}
+	h2s := &http2.Server{
+		// ...
+	}
+	//handler := http.HandlerFunc(rootHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", rootHandler)
+	mux.HandleFunc("/get/data", dataInResponseHandler)
+	mux.HandleFunc("/post/data", readBodyHandler)
+	mux.HandleFunc("/die", DieHorriblyHandler)
+	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/shutdown", shutdownHTTPServer)
+	server = &http.Server{Addr: ":" + os.Getenv("PORT"), Handler: h2c.NewHandler(mux, h2s)}
 	serverChan = make(chan (string), 0)
 	serverError := make(chan (error), 0)
 
-	http.HandleFunc("/", rootHandler)
-	http.HandleFunc("/get/data", dataInResponseHandler)
-	http.HandleFunc("/post/data", readBodyHandler)
-	http.HandleFunc("/die", DieHorriblyHandler)
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/shutdown", shutdownHTTPServer)
+	go monitorServerError(serverError)
+
 	//http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	go listenAndServeHTTP(serverError)
 	for {
