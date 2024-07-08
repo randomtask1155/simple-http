@@ -56,6 +56,9 @@ func main() {
 	mux.HandleFunc("/die", DieHorriblyHandler)
 	mux.HandleFunc("/health", healthHandler)
 	mux.HandleFunc("/shutdown", shutdownHTTPServer)
+	mux.HandleFunc("/csv", csvHandler)
+	mux.HandleFunc("/json", jsonHandler)
+
 	server = &http.Server{Addr: ":" + os.Getenv("PORT"), Handler: h2c.NewHandler(mux, h2s)}
 	serverChan = make(chan (string), 0)
 	serverError := make(chan (error), 0)
