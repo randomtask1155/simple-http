@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -31,8 +32,8 @@ func DieHorriblyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
-	https://domain/health?sleep=2
-	adding sleep param will set sleep for all future requests
+https://domain/health?sleep=2
+adding sleep param will set sleep for all future requests
 */
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	sleep := r.FormValue("sleep")
@@ -69,6 +70,27 @@ func shutdownHTTPServer(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(time.Duration(int64(s)) * time.Second)
 	fmt.Println("starting the http server")
 	serverChan <- "start"
+}
+
+func csvHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(fmt.Sprintf("\"columna\",\"columnb\"\n\"yup\",\"ok\"\n")))
+}
+
+func jsonHandler(w http.ResponseWriter, r *http.Request) {
+
+	type JsonTable struct {
+		Ticket      string `json:"ticket"`
+		Description string `json:"description"`
+	}
+	jt := JsonTable{"123456789", "nothing to see here"}
+	b, err := json.Marshal(jt)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(b)
 }
 
 func dataInResponseHandler(w http.ResponseWriter, r *http.Request) {

@@ -6,6 +6,6 @@ applications:
     buildpack: go_buildpack
     command: simple-http
     readiness-health-check-type: process
-    routes:
-    - route: simple-http.DOMAIN
-      protocol: http2
+#    routes:
+    #- route: simple-http.DOMAIN
+    #  protocol: http2
