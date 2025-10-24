@@ -3,7 +3,8 @@ applications:
   - name: simple-http
     memory: 128M
     instances: 1
-    buildpack: go_buildpack
+    buildpacks: 
+    - go_buildpack
     command: simple-http
     readiness-health-check-type: process
 #    routes:

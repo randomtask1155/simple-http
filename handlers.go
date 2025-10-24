@@ -130,3 +130,7 @@ func readBodyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 }
+
+func return502Handler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusBadGateway)
+}
